@@ -105,50 +105,34 @@ public class FileOperations {
     public static void writeStatusToProductDisplayedInExcel(String filePath, String product, Boolean status) throws InvalidFormatException, IOException {
         File file = new File(filePath);
         FileInputStream fis = new FileInputStream(file);
-        //OPCPackage pck = OPCPackage.open(file);
-        //XSSFWorkbook wb = new XSSFWorkbook(pck);
-        //XSSFWorkbook wb = XSSFWorkbookFactory.createWorkbook(pck);
         XSSFWorkbook wb = new XSSFWorkbook(fis);
         XSSFSheet sheet = wb.getSheetAt(0);
         XSSFRow row;
         XSSFCell cell;
+        String productNumber;
 
         int rows = sheet.getPhysicalNumberOfRows();
         for (int i = 0; i < rows; ++i) {
             row = sheet.getRow(i);
             if (row != null) {
                 cell = row.getCell(0);
-                if (cell != null && cell.getCellType() != CellType.BLANK) {
-                    double prodNum = cell.getNumericCellValue();
-                    NumberFormat nf = NumberFormat.getInstance();
-                    nf.setGroupingUsed(false);
-                    nf.setMaximumIntegerDigits(999);
-                    nf.setMaximumFractionDigits(0);
-
-                    if(nf.format(prodNum).equals(product)) {
-                        cell = row.createCell(1, CellType.STRING);
-                        CellStyle cs = wb.createCellStyle();
-                        if(status==true){
-                            cell.setCellValue("Product displayed properly");
-                            cs.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-                            cs.setFillForegroundColor(IndexedColors.GREEN.getIndex());
-                            //cs.setFillBackgroundColor(IndexedColors.GREEN.getIndex());
-                            cell.setCellStyle(cs);
-
-                        } else {
-                            cell.setCellValue("Page 404 displayed");
-                            cs.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-                            cs.setFillForegroundColor(IndexedColors.RED.getIndex());
-                            //cs.setFillBackgroundColor(IndexedColors.RED.getIndex());
-                            cell.setCellStyle(cs);
-
-                        }
-                    }
-                } else {
-                    break;
-                }
             } else {
+                System.out.println("No more rows exist.");
                 break;
+            }
+
+            if (cell != null && cell.getCellType() == CellType.NUMERIC) {
+                productNumber = processProductNumberFromDoubleToString(cell.getNumericCellValue());
+            } else if (cell != null && cell.getCellType() == CellType.STRING) {
+                productNumber = cell.getStringCellValue();
+            } else {
+                System.out.println("Cell contents are neither number nor string.");
+                break;
+            }
+
+            if(productNumber.equals(product)) {
+                cell = row.createCell(1, CellType.STRING);
+                fillCellWithResult(wb, cell, status);
             }
         }
         fis.close();
@@ -156,5 +140,29 @@ public class FileOperations {
         wb.write(fos);
         wb.close();
         fos.close();
+    }
+
+    private static String processProductNumberFromDoubleToString(double productNumber){
+        NumberFormat nf = NumberFormat.getInstance();
+        nf.setGroupingUsed(false);
+        nf.setMaximumIntegerDigits(999);
+        nf.setMaximumFractionDigits(0);
+        return nf.format(productNumber);
+    }
+
+    private static void fillCellWithResult(XSSFWorkbook wb, XSSFCell cell, Boolean status) {
+        CellStyle cs = wb.createCellStyle();
+        if(status==true){
+            cell.setCellValue("Product displayed properly");
+            cs.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            cs.setFillForegroundColor(IndexedColors.GREEN.getIndex());
+            cell.setCellStyle(cs);
+
+        } else {
+            cell.setCellValue("Page 404 displayed");
+            cs.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            cs.setFillForegroundColor(IndexedColors.RED.getIndex());
+            cell.setCellStyle(cs);
+        }
     }
 }
